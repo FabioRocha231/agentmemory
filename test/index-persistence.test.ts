@@ -275,6 +275,33 @@ describe("IndexPersistence", () => {
     expect(loaded.vector!.size).toBe(1);
   });
 
+  it("falls back to the default shard size for fractional values below one", async () => {
+    const bm25 = makeBm25("obs_fraction", "fractional shard config");
+    let newShardWrites = 0;
+    const guardedKv = {
+      ...kv,
+      set: vi.fn(async <T>(scope: string, key: string, data: T): Promise<T> => {
+        if (scope.includes(":gen_fraction:")) {
+          newShardWrites += 1;
+          if (newShardWrites > 3) {
+            throw new Error("fractional shard size caused zero-width shards");
+          }
+        }
+        return kv.set(scope, key, data);
+      }),
+    };
+
+    await new IndexPersistence(guardedKv as never, bm25, null, {
+      shardChars: 0.5,
+      createGeneration: () => "gen_fraction",
+    }).save();
+
+    const manifest = await getBm25Manifest(kv);
+    expect(manifest.generation).toBe("gen_fraction");
+    expect(manifest.shards.length).toBe(1);
+    expect(newShardWrites).toBe(1);
+  });
+
   it("keeps the previous generation when a shard write fails before manifest commit", async () => {
     const previous = makeBm25("obs_old", "alpha previous snapshot");
     await new IndexPersistence(kv as never, previous, null, {
@@ -343,6 +370,9 @@ describe("IndexPersistence", () => {
     await expect(kv.get(BM25_SCOPE, BM25_MANIFEST_KEY)).resolves.toEqual(
       previousManifest,
     );
+    await expect(
+      kv.get("mem:index:bm25:bm25:gen_new:00000", "data"),
+    ).resolves.toBeNull();
     const loaded = await new IndexPersistence(
       kv as never,
       new SearchIndex(),
@@ -488,7 +518,7 @@ describe("IndexPersistence", () => {
 
     await expect(
       kv.get("mem:index:bm25:vectors:gen_new:00000", "data"),
-    ).resolves.toEqual(expect.any(String));
+    ).resolves.toBeNull();
     const loaded = await new IndexPersistence(
       kv as never,
       new SearchIndex(),

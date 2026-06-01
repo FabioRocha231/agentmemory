@@ -30,11 +30,11 @@ type IndexPersistenceOptions = {
 
 function shardChars(options: IndexPersistenceOptions): number {
   const configured = options.shardChars;
-  return typeof configured === "number" &&
-    Number.isFinite(configured) &&
-    configured > 0
-    ? Math.floor(configured)
-    : DEFAULT_INDEX_SHARD_CHARS;
+  if (typeof configured !== "number" || !Number.isFinite(configured)) {
+    return DEFAULT_INDEX_SHARD_CHARS;
+  }
+  const wholeChars = Math.floor(configured);
+  return wholeChars >= 1 ? wholeChars : DEFAULT_INDEX_SHARD_CHARS;
 }
 
 function createIndexGeneration(): string {
@@ -172,12 +172,24 @@ export class IndexPersistence {
       }
     }
 
-    await this.kv.set<IndexShardManifest>(KV.bm25Index, manifestKey, {
+    const nextManifest: IndexShardManifest = {
       v: 1,
       generation,
       shards,
       chars: serialized.length,
-    });
+    };
+    try {
+      await this.kv.set<IndexShardManifest>(
+        KV.bm25Index,
+        manifestKey,
+        nextManifest,
+      );
+    } catch (err) {
+      if (!(await this.isManifestPublished(manifestKey, nextManifest))) {
+        await this.deleteShards(shards);
+      }
+      throw err;
+    }
 
     await this.kv.delete(KV.bm25Index, legacyKey).catch(() => {});
     if (previous?.v === 1 && Array.isArray(previous.shards)) {
@@ -197,6 +209,33 @@ export class IndexPersistence {
     for (const shard of shards) {
       await this.kv.delete(shard.scope, shard.key).catch(() => {});
     }
+  }
+
+  private async isManifestPublished(
+    manifestKey: string,
+    expected: IndexShardManifest,
+  ): Promise<boolean> {
+    const published = await this.kv
+      .get<IndexShardManifest>(KV.bm25Index, manifestKey)
+      .catch(() => null);
+    if (
+      published?.v !== 1 ||
+      published.generation !== expected.generation ||
+      published.chars !== expected.chars ||
+      !Array.isArray(published.shards) ||
+      published.shards.length !== expected.shards.length
+    ) {
+      return false;
+    }
+    return published.shards.every((shard, index) => {
+      const expectedShard = expected.shards[index];
+      if (!expectedShard) return false;
+      return (
+        shard.scope === expectedShard.scope &&
+        shard.key === expectedShard.key &&
+        shard.chars === expectedShard.chars
+      );
+    });
   }
 
   private async loadBm25Data(): Promise<string | null> {
