@@ -22,6 +22,7 @@ services:
       GRAPH_EXTRACTION_ENABLED: "true"
     expose:
       - "3111"
+      - "3112"
       - "3113"
     volumes:
       - agentmemory-data:/data
@@ -32,6 +33,7 @@ services:
       - traefik.docker.network=dokploy-network
       - traefik.http.services.am.loadbalancer.server.port=3111
       - traefik.http.services.amview.loadbalancer.server.port=3113
+      - traefik.http.services.amstream.loadbalancer.server.port=3112
 
       # ---- API: memory.ocati.com.br (viewer bloqueado) ----
       - traefik.http.routers.am-api.rule=Host(`memory.ocati.com.br`)
@@ -56,6 +58,15 @@ services:
       - traefik.http.routers.am-view.middlewares=am-auth,am-token
       - traefik.http.middlewares.am-auth.basicauth.users=${VIEWER_USERS}
       - traefik.http.middlewares.am-token.headers.customrequestheaders.Authorization=Bearer ${AGENTMEMORY_SECRET}
+
+      # ---- WebSocket ao vivo do viewer: /stream -> porta 3112 (mesmo login+token) ----
+      # Cliente conecta em wss://memory-view.ocati.com.br:443/stream/... (abrir com ?wsPort=443)
+      - "traefik.http.routers.am-stream.rule=Host(`memory-view.ocati.com.br`) && PathPrefix(`/stream`)"
+      - traefik.http.routers.am-stream.entrypoints=websecure
+      - traefik.http.routers.am-stream.tls.certresolver=letsencrypt
+      - traefik.http.routers.am-stream.priority=200
+      - traefik.http.routers.am-stream.service=amstream
+      - traefik.http.routers.am-stream.middlewares=am-auth,am-token
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3111/agentmemory/livez || exit 1"]
       interval: 30s
