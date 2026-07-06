@@ -66,7 +66,9 @@ services:
       - traefik.http.routers.am-stream.tls.certresolver=letsencrypt
       - traefik.http.routers.am-stream.priority=200
       - traefik.http.routers.am-stream.service=amstream
-      - traefik.http.routers.am-stream.middlewares=am-auth,am-token
+      - traefik.http.routers.am-stream.middlewares=am-auth,am-token,am-wsroot
+      # streams (3112) parece servir o WS no root; reescreve /stream/mem-live/viewer -> /
+      - traefik.http.middlewares.am-wsroot.stripprefix.prefixes=/stream/mem-live/viewer
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3111/agentmemory/livez || exit 1"]
       interval: 30s
