@@ -10,8 +10,13 @@ services:
     restart: unless-stopped
     environment:
       SERVICE_FQDN_AGENTMEMORY_3111: ${SERVICE_FQDN_AGENTMEMORY_3111}
+      # Viewer (porta 3113) exposto na rede: bind 0.0.0.0 + allowlist de Host.
+      # Exige AGENTMEMORY_SECRET (o entrypoint exporta de /data/.hmac).
+      AGENTMEMORY_VIEWER_HOST: "0.0.0.0"
+      VIEWER_ALLOWED_HOSTS: "memory-view.ocati.com.br"
     expose:
       - "3111"
+      - "3113"
     volumes:
       - agentmemory-data:/data
     networks:
@@ -20,6 +25,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=dokploy-network
       - traefik.http.services.am.loadbalancer.server.port=3111
+      - traefik.http.services.amview.loadbalancer.server.port=3113
 
       # ---- API: memory.ocati.com.br (viewer bloqueado) ----
       - traefik.http.routers.am-api.rule=Host(`memory.ocati.com.br`)
@@ -35,14 +41,12 @@ services:
       - traefik.http.routers.am-block.middlewares=am-deny
       - traefik.http.middlewares.am-deny.ipallowlist.sourcerange=127.0.0.1/32
 
-      # ---- Viewer: dashboard.ocati.com.br (login + token injetado) ----
-      # Segredos vêm do Environment do Dokploy (interpolados), nunca do git:
-      #   AGENTMEMORY_SECRET = valor de /data/.hmac
-      #   VIEWER_USERS       = cardapya:{SHA}...  (basic-auth)
+      # ---- Viewer: memory-view.ocati.com.br -> porta 3113 (login + token) ----
+      # Segredos via Environment do Dokploy: AGENTMEMORY_SECRET, VIEWER_USERS
       - traefik.http.routers.am-view.rule=Host(`memory-view.ocati.com.br`)
       - traefik.http.routers.am-view.entrypoints=websecure
       - traefik.http.routers.am-view.tls.certresolver=letsencrypt
-      - traefik.http.routers.am-view.service=am
+      - traefik.http.routers.am-view.service=amview
       - traefik.http.routers.am-view.middlewares=am-auth,am-token
       - traefik.http.middlewares.am-auth.basicauth.users=${VIEWER_USERS}
       - traefik.http.middlewares.am-token.headers.customrequestheaders.Authorization=Bearer ${AGENTMEMORY_SECRET}
