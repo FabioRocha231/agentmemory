@@ -14,6 +14,9 @@ services:
       # Exige AGENTMEMORY_SECRET (o entrypoint exporta de /data/.hmac).
       AGENTMEMORY_VIEWER_HOST: "0.0.0.0"
       VIEWER_ALLOWED_HOSTS: "memory-view.ocati.com.br"
+      # Compressão semântica via Gemini (valor real vem do Environment do Dokploy).
+      # Alternativa: troque por ANTHROPIC_API_KEY / OPENROUTER_API_KEY.
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     expose:
       - "3111"
       - "3113"
