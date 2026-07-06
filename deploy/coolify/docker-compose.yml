@@ -20,6 +20,9 @@ services:
       # Usa o Gemini de fato: compressão LLM por observação + knowledge graph.
       AGENTMEMORY_AUTO_COMPRESS: "true"
       GRAPH_EXTRACTION_ENABLED: "true"
+      # Team sharing: habilita escopo por (TEAM_ID, USER_ID). O tuple vem do cliente
+      # (cada repo manda seu TEAM_ID: ocati/wizo). Não fixar TEAM_ID aqui — é multi-time.
+      TEAM_MODE: "shared"
     expose:
       - "3111"
       - "3112"
