@@ -20,8 +20,11 @@ services:
       # Usa o Gemini de fato: compressão LLM por observação + knowledge graph.
       AGENTMEMORY_AUTO_COMPRESS: "true"
       GRAPH_EXTRACTION_ENABLED: "true"
-      # Team sharing: habilita escopo por (TEAM_ID, USER_ID). O tuple vem do cliente
-      # (cada repo manda seu TEAM_ID: ocati/wizo). Não fixar TEAM_ID aqui — é multi-time.
+      # Team memory (feed). loadTeamConfig() exige TEAM_ID + USER_ID no env do
+      # SERVIDOR (o TEAM_ID do cliente é IGNORADO — é 1 time por servidor, boot-time).
+      # Sem estes dois, as funções team-share/feed nem registram ("not enabled").
+      TEAM_ID: "ocati"
+      USER_ID: "fabio-rocha"
       TEAM_MODE: "shared"
     expose:
       - "3111"
