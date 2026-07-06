@@ -14,17 +14,48 @@ services:
       - "3111"
     volumes:
       - agentmemory-data:/data
+    networks:
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.am.loadbalancer.server.port=3111
+
+      # ---- API: memory.ocati.com.br (viewer bloqueado) ----
+      - traefik.http.routers.am-api.rule=Host(`memory.ocati.com.br`)
+      - traefik.http.routers.am-api.entrypoints=websecure
+      - traefik.http.routers.am-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.am-api.service=am
+
+      - "traefik.http.routers.am-block.rule=Host(`memory.ocati.com.br`) && PathPrefix(`/agentmemory/viewer`)"
+      - traefik.http.routers.am-block.entrypoints=websecure
+      - traefik.http.routers.am-block.tls.certresolver=letsencrypt
+      - traefik.http.routers.am-block.priority=100
+      - traefik.http.routers.am-block.service=am
+      - traefik.http.routers.am-block.middlewares=am-deny
+      - traefik.http.middlewares.am-deny.ipallowlist.sourcerange=127.0.0.1/32
+
+      # ---- Viewer: dashboard.ocati.com.br (login + token injetado) ----
+      # Segredos vêm do Environment do Dokploy (interpolados), nunca do git:
+      #   AGENTMEMORY_SECRET = valor de /data/.hmac
+      #   VIEWER_USERS       = cardapya:{SHA}...  (basic-auth)
+      - traefik.http.routers.am-view.rule=Host(`dashboard.ocati.com.br`)
+      - traefik.http.routers.am-view.entrypoints=websecure
+      - traefik.http.routers.am-view.tls.certresolver=letsencrypt
+      - traefik.http.routers.am-view.service=am
+      - traefik.http.routers.am-view.middlewares=am-auth,am-token
+      - traefik.http.middlewares.am-auth.basicauth.users=${VIEWER_USERS}
+      - traefik.http.middlewares.am-token.headers.customrequestheaders.Authorization=Bearer ${AGENTMEMORY_SECRET}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3111/agentmemory/livez || exit 1"]
       interval: 30s
       timeout: 5s
-      start_period: 30s
       retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+      start_period: 30s
 
 volumes:
   agentmemory-data:
+
+networks:
+  dokploy-network:
+    external: true
