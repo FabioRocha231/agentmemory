@@ -17,6 +17,9 @@ services:
       # Compressão semântica via Gemini (valor real vem do Environment do Dokploy).
       # Alternativa: troque por ANTHROPIC_API_KEY / OPENROUTER_API_KEY.
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # Usa o Gemini de fato: compressão LLM por observação + knowledge graph.
+      AGENTMEMORY_AUTO_COMPRESS: "true"
+      GRAPH_EXTRACTION_ENABLED: "true"
     expose:
       - "3111"
       - "3113"
