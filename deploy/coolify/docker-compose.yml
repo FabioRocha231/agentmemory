@@ -39,7 +39,7 @@ services:
       # Segredos vêm do Environment do Dokploy (interpolados), nunca do git:
       #   AGENTMEMORY_SECRET = valor de /data/.hmac
       #   VIEWER_USERS       = cardapya:{SHA}...  (basic-auth)
-      - traefik.http.routers.am-view.rule=Host(`dashboard.ocati.com.br`)
+      - traefik.http.routers.am-view.rule=Host(`memory-view.ocati.com.br`)
       - traefik.http.routers.am-view.entrypoints=websecure
       - traefik.http.routers.am-view.tls.certresolver=letsencrypt
       - traefik.http.routers.am-view.service=am
