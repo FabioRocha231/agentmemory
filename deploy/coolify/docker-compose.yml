@@ -14,10 +14,11 @@ services:
       # Exige AGENTMEMORY_SECRET (o entrypoint exporta de /data/.hmac).
       AGENTMEMORY_VIEWER_HOST: "0.0.0.0"
       VIEWER_ALLOWED_HOSTS: "memory-view.ocati.com.br"
-      # Compressão semântica via Gemini (valor real vem do Environment do Dokploy).
-      # Alternativa: troque por ANTHROPIC_API_KEY / OPENROUTER_API_KEY.
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
-      # Usa o Gemini de fato: compressão LLM por observação + knowledge graph.
+      # LLM via MiniMax Token Plan (endpoint Anthropic-compat, provider nativo).
+      # Subscription Key (sk-...) vem do Environment do Dokploy.
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY}
+      MINIMAX_MODEL: ${MINIMAX_MODEL:-MiniMax-M2.7}
+      # Compressão LLM por observação + knowledge graph.
       AGENTMEMORY_AUTO_COMPRESS: "true"
       GRAPH_EXTRACTION_ENABLED: "true"
       # Team memory (feed). loadTeamConfig() exige TEAM_ID + USER_ID no env do
