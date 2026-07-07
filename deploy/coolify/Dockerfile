@@ -19,6 +19,11 @@ RUN printf '{"name":"agentmemory-deploy","version":"1.0.0","private":true,"overr
  && npm install "@agentmemory/agentmemory@${AGENTMEMORY_VERSION}" --omit=optional --no-fund --no-audit \
  && ln -s /opt/agentmemory/node_modules/.bin/agentmemory /usr/local/bin/agentmemory
 
+# Bump graph viewer render cap 500 -> 1200 (browser handles ~1200 force-directed nodes)
+RUN sed -i 's/GRAPH_INITIAL_LIMIT *= *500/GRAPH_INITIAL_LIMIT = 1200/' \
+      /opt/agentmemory/node_modules/@agentmemory/agentmemory/dist/viewer/index.html \
+ && grep -q 'GRAPH_INITIAL_LIMIT = 1200' /opt/agentmemory/node_modules/@agentmemory/agentmemory/dist/viewer/index.html
+
 ENV AGENTMEMORY_III_VERSION=${III_VERSION} \
     TINI_SUBREAPER=1
 
